@@ -1,0 +1,426 @@
+\documentclass{cumcmthesis}
+% \documentclass[withoutpreface,bwprint]{cumcmthesis} %去掉封面与编号页，电子版提交的时候使用。
+
+
+\usepackage[framemethod=TikZ]{mdframed}
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+\usepackage{amsmath}
+\usepackage{url}   % 网页链接
+\usepackage{subcaption} % 子标题
+\title{全国大学生数学建模竞赛编写的 \LaTeX{} 模板}
+\tihao{E}
+\baominghao{0000}
+\schoolname{XX大学}
+\membera{ }
+\memberb{ }
+\memberc{ }
+\supervisor{ }
+\yearinput{2023}
+\monthinput{08}
+\dayinput{22}
+
+\begin{document}
+
+ \maketitle
+ \begin{abstract}
+我们在本文中针对物料的需求数据建立了一个基于ACF和ARIMA模型的时间序列预测模型，从而实现对产品需求量的预测，并根据预测为企业制订相符合的生产计划，从而为企业实现利益最大化。\par
+在建立模型的过程中，我们首先通过 ADF 和 KPSS 测试时间序列是否平稳，并决定差分阶数。接着我们建立了一个 ACF 模型，  测试了物料的波动和变换趋势， 并根据物料需求次数和数量来进行物料的选择，我们的结果显示物料 6004010256 ，6004020374， 6004020503 ，6004020918 ，6004100008 是最值得关注的。\par
+为了给企业制订与需求量相符合的生产计划，我们建立了一个 ARIMA 模型来对需求量数据进行分析预测，  ARIMA 模型是针对时间序列的预测模型，根据平稳度分析，  我们将 ARIMA 模型的自回归阶数 p，差分阶数d，移动平均阶数q分别设为 5，1，5，得到的分析结果显示我们的模型满足 90\% 以上的周需求。\par
+接下来，为了进一步贴近实际情况，我们考虑了需要计算物料的储存成本的情况。通过引入单位物料在一周的储存成本，我们定量地计算出了在我们的预测模型下的具体的每周以及总计的储存成本。我们设定最理想的情况自然是供求完全匹配的情况，并设定这种情况下的储存成本为标准量，这样我们就可以计算出相较于标准量由于物料未及时卖出导致的滞留所产生的额外成本，这样这个计划的制订就能转化为一个针对我们设定的计划购入量加成参数α的优化问题，优化目标是尽可能减少额外储存成本，而服务水平下限就是这个线性规划问题的限制条件。通过解决这个最优化问题，我们得出了在设定服务水平下限是XX的情况下，α=XXX的时候能够保证额外储存成本最小化。\par
+对于物料需要在k周及以后才能被销售出去的情况，我们设定了一系列关于可出售物料的参量，并针对采购物料与物料到达可出售期设定k周的时延，从而实现了对这种情况下的推广。根据我们的模型的产品需求预测量以及实际情况下的产品剩余量，我们给出了在推广到延迟k周才能销售出去的情况下我们的预测模型所给出的生产计划，从而保证企业的供求利益最大化。
+
+\keywords{ACF，KPSS时间平稳性检验，ARIMA,}
+\end{abstract}
+
+%目录  2019 明确不要目录，我觉得这个规定太好了
+%\tableofcontents
+
+%\newpage
+\section{问题重述}
+在本次问题中，我们将为企业建立安排生产计划的模型。根据企业的历史物料需求量的表，我们需要选取六种物料进行分析，通过对这几种物料的历史性数据进行分析，建立预测模型预测出未来的物料需求量，并使用对应的实际物料生产量与我们的预测值进行比对，进而评估我们的预测模型与实际情况的差异。接下来，我们需要用我们的预测模型进一步综合考虑，为企业制订每周的生产计划，并通过历史数据计算出每周的服务水平作为计划与实际需求的差异指标来衡量我们的计划与实际情况的拟合情况。为了进一步研究更加复杂的管理情况，需要进一步引入库存成本进行考虑，即更贴近实际情况下的储存的货物会造成资金消耗的情况，在这种情况下，我们的模型需要调整在之前所做的计划，从而总体上降低在储存货物上的成本支出。更进一步的，有许多情况下物料购入后并不一定可以立刻售出，因而我们的模型需要对购入物料只能在k周（k为参数）后售出的情况重新安排计划，以保证企业能有更加合理的生产计划，尽可能避免因供求不匹配导致的亏损。
+\section{模型假设}
+\begin{enumerate}
+    \item 时间序列中可能存在自相关和移动平均性质，并且这些特征可以用一定数量的 AR 和 MA 参数来捕捉；在消除趋势、季节性等影响后，时间序列可以被视为平稳时间序列，并且可以对其未来进行可靠的预测。
+    \item 在不考虑物料需要在k周后才能销售的情况下，决策第n周物料购入量的时间为已知第n-1周的销售情况之后，开始第n周的销售销售之前，即本周的决策进货量是可以直接供给本周销售的。
+    \item 在考虑物料需要在k周后才能销售的情况下，决策第n周物料购入量的时间为已知第n-1周的销售情况之后，开始第n周的销售销售之前，即决定本周的决策进货量之前不知道本周的销售情况。也就是说进货时间从本周开始计算，第n周的决策进货量可以且仅可以直接供给第n+k周及以后的销售。
+    \item 5.在计算储存成本时，认为第n周需要计算储存成本的物料量等于第n周物料采购后的物料剩余量，也就是上周（第n-1周）物料销售结束后的物料量加上第n周的物料采购量。
+\end{enumerate}
+
+\section{符号说明}
+\begin{table}[H]
+    \centering
+    \caption{符号表}
+    \begin{tabular}{|l|l|}
+\hline
+符号     & 意义                         \\ \hline
+fre    & 频数                         \\ \hline
+dem    & 需求量                        \\ \hline
+AIC    & 信息量准则            \\ \hline
+pur    & 实际购买量                      \\ \hline
+Se     & 可出售物料储存量                   \\ \hline
+Sf     & 预测可出售物料剩余量                 \\ \hline
+U(i)   & 模型预测的第i周实际需求量              \\ \hline
+α      & 相较于预测量决策采购量的加成比例           \\ \hline
+z      & 单位物料储存一周的成本                \\ \hline
+C（n）   & 第n周为了储存物料的成本               \\ \hline
+T（n）   & 第n周为了储存物料的总成本              \\ \hline
+R（n）   & 第n周的服务水平                   \\ \hline
+dem（n） & 第n周实际需求量                   \\ \hline
+RT     & 平均服务水平                     \\ \hline
+H      & 平均服务水平设定的下限                \\ \hline
+Tp（n）  & 总额外储存成本                    \\ \hline
+Cs（n）  & 供求完全平衡或供不应求的情况下的第n周储存成本    \\ \hline
+Ts（n）  & 供求完全平衡或供不应求的情况下的1-n周的总储存成本 \\ \hline
+\end{tabular}
+    
+    \label{tab:my_label}
+\end{table}
+\section{模型}
+\subsection{数据预处理}
+我们首先将数据整理为周数据，然后我们重点对数据进行了ADF和KPSS时间平稳性检验，ADF算法是一种自适应滤波算法，用于估计时间序列模型中的参数。它基于最小二乘法，通过递归地更新参数来逐步拟合数据，并使用信息准则（如Akaike信息准则）选择最佳模型。
+ADF算法的全称为Augmented Dickey-Fuller Test。主要目的是检验时间序列是否具有单位根，即是否具有随机漂移或趋势，如果时间序列具有单位根，则说明它是非平稳的。ADF算法的基本思想是通过检验单位根的存在来判断时间序列是否平稳，如果不存在单位根，则认为时间序列是平稳的。\\
+\begin{algorithm}[H]
+\caption{Augmented Dickey-Fuller Test Algorithm}
+\begin{algorithmic}[1]
+\textbf{REQUIRE} 时间序列 $X_tX$\\
+ 确定ARIMA模型的阶数p和q\\
+计算差分序列$Y_t = \nabla X_t$\\
+ 对$Y_tY$进行ADF检验，得到tt统计量\\
+\textbf{IF:}{t统计量小于临界值}\\
+ 接受原假设\\
+\textbf{ELSE:}
+ 拒绝原假设\\
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
+KPSS检验是另一种用于检查时间序列的平稳性的统计检测方法。与以上ADF算法相比，KPSS算法最大的不同点就是它的原假设是平稳序列或趋势平稳序列（序列不存在单位根），而备择假设是存在单位根（时间序列是非平稳的）。也就是说在KPSS检验过程中，如果检验统计量大于临界值，我们会否决原假设(也就是我们认为序列是不平稳的)。当检验统计量小于临界值时，否决原假设失败(也就是说我们认为序列是平稳的)。在为时间序列数据集准备模型之前，通常会同时进行两种统计检测。ADF检验有线性平稳或差分平稳的备择假设，而KPSS检验则是识别序列的趋势平稳。
+\subsection{问题一：基于ACF回归的重要模型选择模型}
+我们首先考虑了物料出现的频数和它的总需求量，出现频率高，需求量大的物料将被首先关注。其次，物料需求的稳定性也是一个非常重要的指标，一种需求稳定的或者呈周期变化的物料更有可能是一种常规的物料，需要被重点关注。\par
+ACF，又称自相关函数（Autocorrelation Function），是指一个时间序列与其滞后版本之间的相关性。ACF模型是一种基于时间序列数据的统计模型，用于分析和预测随时间变化的现象。在ACF模型中，我们将物料的需求量视为随机过程，其中每个时刻的观测值取决于之前的观测值以及随机误差。我们通过分析观测值的自相关函数来找出这个过程的规律和趋势，并根据这些信息进行预测。ACF模型通常包括三个主要组成部分：趋势、季节性和随机波动。趋势指的是数据集整体上的增长或下降趋势；季节性则指某些周期性的变化，如每年的季节变化或每周的工作日和休息日的变化；而随机波动则代表了无法解释的随机噪声。\par
+如果ACF在一个滞后期上表现出显著的正相关性，则说明该时间序列在该滞后期上存在趋势。反之，如果ACF在一个滞后期上表现出显著的负相关性，则说明该时间序列在该滞后期上存在反向趋势。然而，在实际情况下，随机波动的时间序列可能会出现一些偶然的相关性。这些偶然的相关性通常只会出现在前几个滞后期，并且逐渐趋于0。如果ACF图表中只有前几个滞后期显示出显著的正相关性或负相关性，那么我们可以基本上将这个时间序列看作是随机波动。\par
+\begin{algorithm}[H]
+  \SetAlgoLined
+  \KwData{物料数据}
+  \KwResult{ACF序列}
+  \textbf{Step 1:} 对时间序列进行中心化处理，这里进行零均值处理。;
+  \textbf{Step 2:}计算每个滞后期的自相关系数，即将每个观测值与滞后期之前的所有观测值做相关性分析，并计算它们之间的相关系数。\;
+  \For{$i \gets 0$ \KwTo $K$}{
+    计算所有 t=i+1, i+2, ..., nt=i+1,i+2,...,n 的 X(t)和 X(t-i) 之间的协方差；
+计算 i=0i=0 时 X 的方差，以及对于 i>0i>0，计算所有 t=i+1, i+2, ..., nt=i+1,i+2,...,n 的 X(t-i)X(t−i) 的方差；
+将协方差除以方差的乘积的平方根来获得自相关系数 r(i)。\;
+  }
+  \caption{Autocorrelation Function (ACF)}
+\end{algorithm}
+对全部商品的频数与趋势分析如图：
+\begin{figure}[!h]
+    \centering
+    \begin{minipage}[c]{0.48\textwidth}
+        \centering
+        \includegraphics[height=0.2\textheight]{CUMCMThesis-master/figures/myplot1.png}
+        \subcaption{频数和需求量}
+    \end{minipage}
+    \begin{minipage}[c]{0.48\textwidth}
+        \centering
+        \includegraphics[height=0.2\textheight]{CUMCMThesis-master/figures/myplot2.png}
+        \subcaption{需求趋势图}
+    \end{minipage}
+    \caption{需求图}
+\end{figure}
+图1中a图的横轴表示频数，纵轴表示总需求量，b图是利用ARC模型分析的需求趋势，从图中可以看出频数和需求量基本成正相关，而需求趋势只有小部分物料需求变化剧烈，在后续的分析中可以发现变化趋势非常大的频数并不高。于是我们将每一周所有物料的频数和需求量进行最大最小归一化，再利用调和平均数进行重要物料选择，如下列公式：
+\begin{align}
+     x_{i}&=\frac{x_{i}-x_{min}}{x_{max}-x_{min}}\\
+    S&=\sqrt{fre^{2}+dem^{2}}
+\end{align}
+
+其中fre表示频数，dem表示需求。我们选择了S值最大的6种物料，它们的物料编号分别是：
+\begin{table}[!h]
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+物料 & 6004010256 & 6004020374 & 6004020375 & 6004020503 & 6004020918 & 6004100008 \\ \hline
+\end{tabular}
+\caption{物料表}
+\end{table}
+\subsection{问题二：基于ARIMA的动态规划模型}
+我们选取物料6004010256作为分析对象，6 种物料的综合结果可以在附录里找到。使用ARIMA模型进行分析，由于ARIMA模型在序列足够长的时候才具有统计意义，经过统计学检验后我们设定最小序列长度为10，即在预测第1周的数据时，我们实际上会使用前十周（-10-0）的数据。\par
+ARIMA（Autoregressive Integrated Moving Average）模型是一种广泛应用于时间序列预测和分析的统计模型。它可以捕捉到时间序列中的趋势、季节性和周期性变化等特征，以及可能存在的自相关和移动平均性质。
+ARIMA 模型由三个部分组成：自回归（AR）部分、差分（I）部分和移动平均（MA）部分。其中，自回归部分使用前期观测值来解释当前值的变化；移动平均部分使用前期误差项来解释当前值的变化；差分部分则是将原始时间序列进行差分，以消除趋势或季节性等因素对数据的影响。ARIMA有三个参数p,d,q。
+\begin{enumerate}
+    \item p 表示 AR 部分阶数，即使用多少个前期观测值来解释当前值。例如，如果 p=2，则当前值取决于前两个时刻的观测值。
+    \item d 表示差分阶数，即对原始序列进行几阶差分以消除趋势或周期性等影响。例如，如果 d=1，则使用当前值减去前一个时刻的值来得到差分值，从而消除了第一阶趋势影响。
+    \item q 表示 MA 部分阶数，即使用多少个前期误差项来解释当前值。例如，如果 q=1，则当前值取决于前一个时刻的误差项。
+\end{enumerate}
+ARIMA模型要求序列满足平稳性，查看ADF检验结果，根据分析t值，分析其是否可以显著性地拒绝序列不平稳的假设(P<0.05)查看差分前后数据对比图，判断是否平稳，同时对时间序列进行自相关分析，根据截尾情况估算其p、q值。ARIMA模型要求模型具备纯随机性，即模型残差为白噪声，查看模型检验表，根据Q统计量的P值(P>0.05)对模型白噪声进行检验，也可以结合信息准则AIC和BIC值进行分析（越低越好），也可以通过模型残差ACF/PACF图进行分析根据模型参数表，得出模型公式结合时间序列分析图进行综合分析，得到向后预测的阶数结果。
+ADF算法是一种自适应滤波算法，用于估计时间序列模型中的参数。它基于最小二乘法，通过递归地更新参数来逐步拟合数据，并使用信息准则（如Akaike信息准则）选择最佳模型。
+
+ARIMA模型根据趋势分析有可能会得到负数，这是因为之前的数据可能是呈较为剧烈的下降趋势，我们将负数的预测值修改为平均值。
+\begin{table}[htbp]
+  \centering
+  \caption{ADF检验结果}
+    \begin{tabular}{ccccccc}
+    \toprule
+     差分阶数 & t值   & P值    & AIC值  & 1\%临界值 & 5\%临界值 & 10\%临界值 \\
+    \midrule
+    0     & -2.664 & 0.080 & 333.152 & -3.53 & -2.905 & -2.59 \\
+    1     & -7.63 & 0 & 330.898 & -3.532 & -2.906 & -2.59 \\
+    2     & -5.785 & 0 & 343.729 & -3.544 & -2.911 & -2.593 \\
+    \bottomrule
+    
+    \end{tabular}%
+  \label{tab:adf}%
+\end{table}
+Akaike信息准则（Akaike Information Criterion，简称AIC）是一种模型选择的方法，用于比较不同模型在拟合数据和预测能力之间的平衡。它基于信息熵理论，通过对模型估计误差和模型复杂度的折衷来选择最佳模型。AIC的计算公式为：
+\begin{equation}
+    AIC = -2\log(L) + 2k
+\end{equation}
+
+
+其中$L$是模型似然函数的最大值，$k$是模型参数数量。AIC越小，说明模型的拟合能力和泛化能力都越好，因此选择AIC最小的模型作为最佳模型。
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\textbf{input:}时间序列数据 $y_t$\\
+\textbf{output:}预测未来值 $\hat{y}_{t+h}$\\
+差分操作：$\Delta y_t = y_t - y_{t-1}$\;
+建立 ARIMA 模型：$\Delta y_t = \phi_1 \Delta y_{t-1} + \cdots + \phi_p \Delta y_{t-p} + \epsilon_t - \theta_1 \epsilon_{t-1} - \cdots - \theta_q \epsilon_{t-q}$\;
+估计模型参数 $\phi_1,\cdots,\phi_p,\theta_1,\cdots,\theta_q$ 和误差方差 $\sigma^2$\;
+预测未来值：
+\For{$i=1$ to $h$}{
+    $\hat{\Delta y}_{t+i} = \phi_1 \Delta y_t + \cdots + \phi_p \Delta y_{t-p+1} - \theta_1 \epsilon_t - \cdots - \theta_q \epsilon_{t-q+1}$\;
+    $\hat{y}_{t+i} = y_t + \hat{\Delta y}_{t+i} + \sum_{j=1}^{i-1} \hat{\Delta y}_{t+j}$\;
+}
+输出预测结果 $\hat{y}_{t+1},\cdots,\hat{y}_{t+h}$\;
+\caption{ARIMA 模型预测算法}
+\end{algorithm}
+我们将p设为5，d设为1，q设为5.ARIMA模型天然的考虑了前期误差项，所以我们把重点放在了未来需求值预测的修正上，在实际问题中，多余的物料可以保存，在问题二里不需要考虑成本的情况下我们给出的基本策略是宁滥勿缺，设ARIMA模型给出的需求量为P，需求量为D，储存量为S，作出需求修正：
+\begin{equation}
+    pur=\alpha (P-S)
+\end{equation}
+pur是实际购买量，$\alpha$是参数，这里设为1.2，表示每次预计多买一点物料，结果向上取整。
+式中$\alpha$是加成因子，表示我们相较于预测量打算采购的加成比例，这是为了进一步避免供不应求的情况发生，即之前我们所说的，优先满足宁滥勿缺的情况，当$\alpha$=1时，就是完全按照预测值采购，$\alpha$>1时相当于会相较于预测值会多进一些物料，这样可以从概率上提高服务水平，这里我们设定$\alpha$为1.2。
+\subsection{问题三：基于物料储存成本的需求模型}
+进一步考虑物料的储存成本，这样就会导致如果出现产品供过于求的情况，由于仓库中有了库存，就会导致储存成本，这样的话出于成本考虑，我们可能需要从原来的计划中减小一定的采购量以尽可能避免储存成本，而这样势必会导致基于概率上服务水平的下降，因为减小采购量更有可能导致供不应求的情况发生，从而导致服务水平被拉低.\par
+现在我们首先定义第n周的物料储存量：
+\begin{equation}
+    S_{t}(n)=\sum_{n}^{i=1}pur\left ( i \right )-\sum_{n}^{i=1} sell\left ( i \right ) 
+\end{equation}
+$ S_{t}(n)$代表第n周可以出售的物料量,$pur\left ( i \right )$是第i周的实际物料购入量，$ sell\left ( i \right ) $是第i周的实际出售量。为了方便决策第n周采购量,$pur\left ( i \right )$我们应当除去该量，从而进一步得到第n周的物料剩余量：
+\begin{equation}
+    \operatorname{Str}(\mathrm{n})=\operatorname{St}(\mathrm{n})-\operatorname{pur}(\mathrm{n})=\sum_{\mathrm{i}=1}^{\mathrm{n}-1} \operatorname{pur}(\mathrm{i})-\sum_{\mathrm{i}=1}^{\mathrm{n}-1} \operatorname{sell}(\mathrm{i})
+\end{equation}
+$S_{tr}$相较于$S_t$，减去了第n周的采购量，这是由于我们现在需要决策的实际上是根据$S_{tr}$决策$pur(n)$，$S_{tr}$就是在我们决策$pur(n)$时的关键依据，即在没有第n周的采购量的情况下的第n周销售前仓库中的可用物料还剩多少。\par
+因而据此便可以给出我们的模型对第n周的购入计划：
+\begin{equation}
+    \text { pur }(n)=\alpha^{*} P(n)-S t r(n)
+\end{equation}
+式中$\alpha$就是之前定义的是加成因子，表示我们相较于预测量打算采购的加成比例。$P(n)$表示模型预测的第n周的需求量。$pur(n)$就是我们的模型给出的第n周的物料采购计划量。\par
+接下来我们计算储存成本：根据假设，在计算储存成本时，认为第n周需要计算储存成本的物料量等于第n周物料采购后的物料剩余量，也就是上周（第n-1周）物料销售结束后的物料量加上第n周的物料采购量，也就是 $S_{t}(n)$。\par
+定义储存1单位物料一周需要成本z，即z是单位物料储存一周的成本，则第n周为了储存物料的成本为：
+\begin{equation}
+    C(n)=z*S_{t}(n)
+\end{equation}
+总计储存成本为：
+\begin{equation}
+    T\left ( n \right ) =\sum_{n}^{i=1} C\left ( i \right ) 
+\end{equation}
+考虑供求完全平衡或供不应求的情况下的储存成本及总储存成本为：
+
+ \begin{equation}
+ \begin{aligned}
+     Cs\left ( n \right )&=z\ast sell\left ( n \right )  \\
+Ts\left ( n \right ) &=\sum_{n}^{i=1} Cs\left ( i \right ) 
+ \end{aligned}
+ \end{equation}
+式中$sell(n)$是第n周的实际出售量。
+这样就可以得到由于物料没有卖出而滞留的物料导致的总额外成本：
+\begin{equation}
+    Tp(n)=T(n)-Ts(n)
+\end{equation}
+考虑到成本，我们将平均服务水平下限设定为H并添加到模型中进行优化，就可以得到一个优化问题，它的优化目标为最小化额外储存成本占比，限制条件为平均服务水平不得小于H：
+\begin{equation}
+\begin{array}{lr}
+\text { Min }  T (n) \\
+\text { s.t. }  R T\ge H\\
+\mathrm{RT}=\sum_{\mathrm{i}=1}^{\mathrm{n}} \mathrm{R}(\mathrm{i}) / \mathrm{n}\\
+R \text { (i) }=1 \text { - St (n)/dem (n) }\\
+\end{array}
+\end{equation}
+
+我们将服务成本的上限设为1.2并添加到模型中。最终结果为：
+\begin{table}[H]
+    \centering
+     \caption{  6004010256物料第 101～110 周的生产计划、实际需求、库存、缺货量及服务水平}
+    \begin{tabular}{|l|l|l|l|l|l|}
+\hline
+\multicolumn{1}{|c|}{周} & \multicolumn{1}{c|}{生产计划/件} & \multicolumn{1}{c|}{实际需求量/件} & \multicolumn{1}{c|}{库存量/件} & \multicolumn{1}{c|}{缺货量/件} & \multicolumn{1}{c|}{服务水平} \\ \hline
+101                     & 5                           & 6                            & -1                         & 1                          & 0.84                      \\ \hline
+102                     & 9                           & 9                            & 0                          & 0                          & 1                         \\ \hline
+103                     & 7                           & 8                            & -1                         & 1                          & 0.875                     \\ \hline
+104                     & 11                          & 11                           & 0                          & 0                          & 1                         \\ \hline
+105                     & 6                           & 6                            & 0                          & 0                          & 1                         \\ \hline
+106                     & 2                           & 2                            & 0                          & 0                          & 1                         \\ \hline
+107                     & 12                          & 14                           & -2                         & 2                          & 0.86                      \\ \hline
+108                     & 7                           & 7                            & 0                          & 0                          & 1                         \\ \hline
+109                     & 2                           & 2                            & 0                          & 0                          & 1                         \\ \hline
+110                     & 8                           & 5                            & 3                          & -3                         & 1.6                       \\ \hline
+\end{tabular}
+   
+    \label{tab:my_label}
+\end{table}
+\subsection{问题四：模型的扩展及其应用}
+在进一步考虑到物料无法立即使用的情况，我们可以将我们的模型中的储存量变化增加k周的时延。由于有这个时延的存在，预测模型在制定进货计划时，不仅仅针对k周后的那周作为计划进货方案，同时由于这个k周的时延，为了保证储存成本最小化，计划进货数也应该根据这k周过去的实际货物出售量进行相应的调整，也就是说，如果在由于这k周里面可能存在需求量与进货量不符的情况，而且根据题目设定，货物是可以在k周后进行出售，因此我们可以建立一个新的量：可出售物料储存量Se：
+\begin{equation}
+    Se(n)=\sum_{i=1}^{n-k}pur\left ( i \right )-\sum_{i=k+1}^{n-1}   sell\left ( i \right ) 
+\end{equation}
+式中Se代表第n周可以出售的物料量，$pur(i)$是第i周的实际物料购入量，$sell(i)$是第i周的实际出售量。于是根据预测模型我们可以进一步定义：预测可出售物料存储量Sf：
+\begin{equation}
+    \text { Sf (n) }=\sum_{i=1}^{n} \operatorname{pur}(i)-\sum_{i=k+1}^{n-1} \operatorname{sell}(i)-\sum_{n}^{n+k-1} U(i)
+\end{equation}
+式中U(i)表示模型预测的第i周实际需求量，这里Sf(n)代表的是模型预测的第n+k周销售前仓库的可出售物料存储量，于第n周所采买的物料是供给n+k周以后的物料的，换句话说，我们实际上需要根据预测的n+k周的物料供求情况来决定第n周的物料购入情况。因此我们进一步定义预测可出售物料剩余量Sr：
+\begin{equation}
+    \operatorname{Sr}(\mathrm{n})=\operatorname{Sf}(\mathrm{n})-\operatorname{pur}(\mathrm{n})=\sum_{i=1}^{n-1} \operatorname{pur}(i)-\sum_{i=k+1}^{n-1} \operatorname{sell}(i)-\sum_{n}^{n+k-1} U(i)
+\end{equation}
+Sr相较于Sf，减去了第n周的采购量，这是由于我们现在需要决策的实际上是根据Sr决策pur(n)，Sr就是在我们决策pur(n)时的关键依据，即在没有第n周的采购量的情况下预测的第n+k周销售前的仓库中的可用物料还剩多少。
+因而据此便可以给出我们的模型对第n周的购入计划：
+\begin{equation}
+    Sp(n)=\alpha P(n+k)-Sr(n)
+\end{equation}
+P(n+k)表示模型预测的第n+k周的需求量。Sp(n)就是我们的模型在推广到k周后才能销售的情况下给出的第n周的物料采购计划量。
+\section{结果分析}
+在问题一建立预测模型的时候，根据我们建立的 ACF 模型， 通过测试物料的波动和变换趋势，根据物料需求次数和数量我们完成了物料的选择，  结果显示物料6004010256 ，6004020374， 6004020503 ，6004020918 ，6004100008 是最值得关注的。
+对于问题二， 根据我们建立的针对时间序列的预测模型：ARIMA 模型进行的预测，  根据平稳度分析，我们将 ARIMA 模型的参数 p，d，q 设为 5，1，5后，结果显示我们的模型满足 90\% 以上的周需求。
+在问题三中，根据模型描述，我们针对设定的购入量加成参数$\alpha$进行优化，设定总平均服务水平不得低于H=XXX，优化目标是保证额外成本占标准成本的比例Γ最小，根据我们的预测模型的数据，这种情况下，当$\alpha$=XXX的情况下，额外成本占标准成本的比例最小，为XXX。此时根据我们的模型制订的生产计划由模型3式给出。
+在问题四中，通过引入延迟参量k，我们根据我们的预测模型的结果计算出了在物料只能在k周及以后出售的情况下的各个参量，并以服务水平以及物料滞留量为因素进行优化计算，根据我们的计算结果，α取XXX的时候可以实现服务水平达标，滞留情况最优，此时根据我们的模型制订的生产计划由模型4给出。
+
+\begin{algorithm}[H] 
+\SetAlgoLined \KwIn{Data set $X$, number of Gaussian distributions $K$, number of iterations $T$} 
+\KwOut{Parameters of Gaussian distributions ${\alpha_j, \mu_j, \Sigma_j}$ for $j=1,\dots,K$}
+
+\textbf{Initialization} of the parameters of each Gaussian distribution.
+
+\For{$t = 1$ \KwTo $T$}{
+    \textbf{Expectation Step:}\\
+       Calculate the posterior probability $p(j|i)$ that each sample belongs to each Gaussian distribution ($i=1,\dots,n$, $j=1,\dots,K$):\\
+    $p(j|i)=\frac{N(x_i|\mu_j,\Sigma_j)\cdot \alpha_j}{\sum_{k=1}^{K}N(x_i|\mu_k,\Sigma_k)\cdot \alpha_k}$\\
+    
+    \textbf{Maximization Step:}\\
+    Update the parameters of each Gaussian distribution using $p(j|i)$:\\
+    $\alpha_j=\frac{\sum_{i=1}^{n}p(j|i)}{n}$\\
+    $\mu_j=\frac{\sum_{i=1}^{n}p(j|i)\cdot x_i}{\sum_{i=1}^{n}p(j|i)}$\\
+    $\Sigma_j=\frac{\sum_{i=1}^{n}p(j|i)\cdot (x_i-\mu_j)(x_i-\mu_j)^T}{\sum_{i=1}^{n}p(j|i)}$\\
+}
+
+\textbf{Return} the parameters of each Gaussian distribution $\{\alpha_j, \mu_j, \Sigma_j\}$ for $j=1,\dots,K$
+
+\caption{Gaussian Mixture Model}
+\end{algorithm}
+\begin{thebibliography}{9}%宽度9
+            \bibitem{bib:one}王燕．应用时间序列分析[M]．北京：中国人民大学出版社 2005.
+            \bibitem{two}王莹,韩宝明,张琦,等. 基于 SARIMA 模型的 北京地铁进站客流量预测[J]. 交通运输系统 工程与信息,2015,15(006):205-211
+            \bibitem{three}王利霞，谢守红，基于 ARIMA 模型的公司产品需求预测研究 ［J］. 物流科技，2014，（3）：36- 40
+            \bibitem{four}张霞伟，基于 ARIMA 模型房地产开发企业对别墅完成投资 的预测［J］. 商品与质量理论研究，2014，（9）：89- 93
+\end{thebibliography}
+\begin{appendices}
+    \section{代码}
+    \begin{lstlisting}[language=matlab]
+function [y_pred, y_confint] = arima_pred(x)
+% 输入：x为一个列向量
+% 输出：y_pred和y_confint分别为ARIMA模型的预测值和95%置信区间
+
+% 将x转换成时间序列对象
+ts = timeseries(x);
+% 对时间序列进行差分操作，使其变得平稳
+d_ts = diff(ts.Data);
+
+% 构建ARIMA模型并进行拟合
+model = arima(2, 2, 2);
+fit_model = estimate(model, d_ts);
+
+% 预测未来两个时间步长（即两个单位周期）
+[y_pred, y_confint] = forecast(fit_model, 1);
+
+% 将预测值和置信区间转换回原始尺度
+y_pred = cumsum(y_pred) + ts.Data(end);
+
+
+end
+
+ \end{lstlisting}
+
+ \begin{lstlisting}[language=matlab]
+function [d_x] = test1(x)
+% 进行ADF检验和KPSS检验
+[h_adf, ~, ~] = adftest(x);
+[h_kpss, ~, ~] = kpsstest(x);
+
+% 判断数列是否平稳，如果不平稳，则进行差分操作
+if h_adf || ~h_kpss
+    d_x = diff(x);
+else
+    d_x = x;
+end
+  \end{lstlisting}
+
+   \begin{lstlisting}[language=matlab]
+N = 70;
+file = 'C:\Users\zzy\Desktop\data.csv';
+filename = 'C:\Users\zzy\Desktop\plan.csv';
+filename1= 'C:\Users\zzy\Desktop\7.csv';
+% 初始化储存数据的向量数组v
+%v = zeros(N, 1);
+ini=file(0;20);
+
+A=zeros(2,N);
+% 循环读取CSV文件前i行第一列数据并存入向量数组
+for i = 1:N
+    % 使用csvread函数读取CSV文件前i行第一列数据
+    data = csvread(filename, 0, 0, [0 0 i-1 0]);
+    v = zeros(i, 1);
+    % 将数据存入向量数组v的前i个位置
+    v(1:i) = data;
+    v0=[ini;v];
+    v1=test1(v0);
+    
+    rel=arima_pred(v1);
+    A(:,i) = rel;
+    disp(i);
+end
+%ts=timeseries(v);
+plot(v1);
+disp(A);
+%csvwrite(filename1, A);
+  \end{lstlisting}
+
+  \begin{lstlisting}[]
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+def autocorr(x):
+    """
+    计算序列 x 的自相关函数（ACF）
+
+    参数：
+    x: 一维数组，表示时间序列数据
+
+    返回值：
+    acf: 一维数组，表示 x 的自相关函数
+    """
+    n = len(x)
+    mean = np.mean(x)
+    var = np.var(x)
+    acf = np.zeros(n)
+
+    for k in range(n):
+        s1 = 0
+        s2 = 0
+        for t in range(k, n):
+            s1 += (x[t] - mean) * (x[t - k] - mean)
+            s2 += (x[t] - mean) ** 2
+        acf[k] = s1 / s2
+
+    return acf
+  \end{lstlisting}
+\end{appendices}
+
+
+
+\end{document} 
